@@ -19,7 +19,8 @@
 #adminLoginError{color:#c62828;margin-top:12px;min-height:20px;text-align:center;font-size:14px}
 .login-demo-note{text-align:center;color:#98a2b3;font-size:12px;margin-top:18px}
 </style></head>
-<body><div id="adminLoginOverlay">
+<body>
+<div id="adminLoginOverlay">
   <div id="adminLoginBox">
     <div class="login-logo">BP</div>
     <h2>Birth Print Portal</h2>
@@ -33,85 +34,36 @@
     <div class="login-demo-note">Authorized Admin Access Only</div>
   </div>
 </div>
-
 <div id="app" class="app hidden">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">BP</div>
-        <div><strong>Birth Print</strong><span>Portal</span></div>
-      </div>
-      <nav id="nav">
-        <button class="nav-item active" data-page="dashboard">▦ <span>Dashboard</span></button>
-        <button class="nav-item" data-page="generator">▤ <span>PDF Generator</span></button>
-        <button class="nav-item" data-page="templates">▧ <span>Templates</span></button>
-        <button class="nav-item" data-page="states">⌖ <span>States</span></button>
-        <button class="nav-item" data-page="languages">文 <span>Languages</span></button>
-        <button class="nav-item" data-page="fields">☷ <span>Form Fields</span></button>
-        <button class="nav-item" data-page="history">◷ <span>PDF History</span></button>
-        <button class="nav-item" data-page="settings">⚙ <span>Settings</span></button>
-      </nav>
-      <div class="sidebar-bottom">
-        <div class="demo-badge">DEMO MODE</div>
-        <button id="logoutBtn" class="nav-item">↪ <span>Logout</span></button>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div>
-          <button id="mobileMenu" class="icon-btn">☰</button>
-          <span class="eyebrow">ADMIN CONTROL CENTER</span>
-          <h2 id="pageTitle">Dashboard</h2>
-        </div>
-        <div class="top-actions">
-          <span id="clock"></span>
-          <div class="avatar" id="adminAvatar">A</div>
-        </div>
-      </header>
-      <section id="content" class="content"></section>
-    </main>
-  </div>
-
-  <div id="toast" class="toast"></div>
-  <script src="js/app.js"></script>
-<script>(function(){const E='digital9637832490@gmail.com',P='Nitesh@143',o=document.getElementById('adminLoginOverlay'),e=document.getElementById('adminLoginEmail'),p=document.getElementById('adminLoginPassword'),b=document.getElementById('adminLoginBtn'),x=document.getElementById('adminLoginError');function l(){if(e.value.trim().toLowerCase()===E&&p.value===P){sessionStorage.setItem('birthPrintAdminLoggedIn','1');o.style.display='none'}else{x.textContent='Invalid Admin ID or Password'}}b.onclick=l;p.onkeydown=a=>{if(a.key==='Enter')l()};if(sessionStorage.getItem('birthPrintAdminLoggedIn')==='1')o.style.display='none'})();</script>
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">BP</div><div><strong>Birth Print</strong><span>Portal</span></div></div>
+    <nav id="nav">
+      <button class="nav-item active" data-page="dashboard">▦ <span>Dashboard</span></button>
+      <button class="nav-item" data-page="generator">▤ <span>PDF Generator</span></button>
+      <button class="nav-item" data-page="templates">▧ <span>Templates</span></button>
+      <button class="nav-item" data-page="states">⌖ <span>States</span></button>
+      <button class="nav-item" data-page="languages">文 <span>Languages</span></button>
+      <button class="nav-item" data-page="fields">☷ <span>Form Fields</span></button>
+      <button class="nav-item" data-page="history">◷ <span>PDF History</span></button>
+      <button class="nav-item" data-page="settings">⚙ <span>Settings</span></button>
+    </nav>
+    <div class="sidebar-bottom"><div class="demo-badge">DEMO MODE</div><button id="logoutBtn" class="nav-item">↪ <span>Logout</span></button></div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><div><button id="mobileMenu" class="icon-btn">☰</button><span class="eyebrow">ADMIN CONTROL CENTER</span><h2 id="pageTitle">Dashboard</h2></div><div class="top-actions"><span id="clock"></span><div class="avatar">A</div></div></header>
+    <section id="content" class="content"></section>
+  </main>
+</div>
+<div id="toast" class="toast"></div>
+<script src="js/app.js"></script>
 <script>
 (function(){
-  const ADMIN_EMAIL="digital9637832490@gmail.com";
-  const ADMIN_PASSWORD="Nitesh@143";
-  const overlay=document.getElementById("adminLoginOverlay");
-  const emailInput=document.getElementById("adminLoginEmail");
-  const passwordInput=document.getElementById("adminLoginPassword");
-  const loginButton=document.getElementById("adminLoginBtn");
-  const errorBox=document.getElementById("adminLoginError");
-  const app=document.getElementById("app");
-  function showApp(){overlay.style.display="none";app.classList.remove("hidden");if(typeof render==="function")render();}
-  function login(){
-    const email=emailInput.value.trim().toLowerCase();
-    const password=passwordInput.value;
-    if(email===ADMIN_EMAIL.toLowerCase() && password===ADMIN_PASSWORD){
-      sessionStorage.setItem("birthPrintAdminLoggedIn","1");
-      sessionStorage.setItem("birthPrintAdminEmail",ADMIN_EMAIL);
-      errorBox.textContent="";
-      showApp();
-    }else{
-      errorBox.textContent="Invalid Admin ID or Password";
-      passwordInput.value="";
-      passwordInput.focus();
-    }
-  }
-  loginButton.addEventListener("click",login);
-  passwordInput.addEventListener("keydown",e=>{if(e.key==="Enter")login();});
-  emailInput.addEventListener("keydown",e=>{if(e.key==="Enter")passwordInput.focus();});
-  if(sessionStorage.getItem("birthPrintAdminLoggedIn")==="1")showApp();
-  const logoutButton=document.getElementById("logoutBtn");
-  if(logoutButton)logoutButton.addEventListener("click",()=>{
-    sessionStorage.removeItem("birthPrintAdminLoggedIn");
-    sessionStorage.removeItem("birthPrintAdminEmail");
-    app.classList.add("hidden");
-    overlay.style.display="flex";
-    emailInput.value=""; passwordInput.value=""; errorBox.textContent="";
-  });
+ const EMAIL='digital9637832490@gmail.com', PASSWORD='Nitesh@143';
+ const o=document.getElementById('adminLoginOverlay'), a=document.getElementById('app'), e=document.getElementById('adminLoginEmail'), p=document.getElementById('adminLoginPassword'), b=document.getElementById('adminLoginBtn'), x=document.getElementById('adminLoginError');
+ function openApp(){o.style.display='none';a.classList.remove('hidden'); if(typeof render==='function') render();}
+ function login(){if(e.value.trim().toLowerCase()===EMAIL.toLowerCase()&&p.value===PASSWORD){sessionStorage.setItem('birthPrintAdminLoggedIn','1');sessionStorage.setItem('birthPrintAdminEmail',EMAIL);x.textContent='';openApp();}else{x.textContent='Invalid Admin ID or Password';p.value='';p.focus();}}
+ b.onclick=login;p.onkeydown=ev=>{if(ev.key==='Enter')login();};e.onkeydown=ev=>{if(ev.key==='Enter')p.focus();};
+ if(sessionStorage.getItem('birthPrintAdminLoggedIn')==='1') openApp();
 })();
 </script>
 </body>

@@ -1,182 +1,177 @@
 const { jsPDF } = window.jspdf || {};
-const STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"];
-const LANGS = ["English","Hindi","Marathi","Gujarati","Kannada","Tamil","Telugu","Bengali","Punjabi","Malayalam","Odia","Assamese"];
-const defaultFields = [
- {key:"name",label:"Name",type:"text",required:true},
- {key:"gender",label:"Gender",type:"select",required:true,options:["Male","Female","Other"]},
- {key:"dob",label:"Date of Birth",type:"date",required:true},
- {key:"place",label:"Place of Birth",type:"text",required:true},
- {key:"mother",label:"Name of Mother",type:"text",required:false},
- {key:"father",label:"Name of Father",type:"text",required:false},
- {key:"address",label:"Address of Parents",type:"textarea",required:false},
- {key:"registration",label:"Registration Number",type:"text",required:false},
- {key:"registrationDate",label:"Date of Registration",type:"date",required:false},
- {key:"issueDate",label:"Date of Issue",type:"date",required:false}
+
+const STATES = [
+  "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"
 ];
-const stateLangs = {
- "Maharashtra":["English","Hindi","Marathi"],"Gujarat":["English","Hindi","Gujarati"],"Karnataka":["English","Hindi","Kannada"],
- "Tamil Nadu":["English","Hindi","Tamil"],"Telangana":["English","Hindi","Telugu"],"West Bengal":["English","Hindi","Bengali"],
- "Punjab":["English","Hindi","Punjabi"],"Kerala":["English","Hindi","Malayalam"],"Odisha":["English","Hindi","Odia"],"Assam":["English","Hindi","Assamese"]
-};
-let data = JSON.parse(localStorage.getItem("bpp_data")||"null") || {
- states: STATES.map(name=>({name,active:true})),
- templates:[{id:1,name:"Birth Certificate — Maharashtra Demo",state:"Maharashtra",active:true}],
- fields:defaultFields, history:[], settings:{logoText:"Birth Print Portal",watermark:"DEMO • SAMPLE • NOT AN OFFICIAL GOVERNMENT DOCUMENT"}
-};
-if(!Array.isArray(data.states)||!data.states.length){data.states=STATES.map(name=>({name,active:true}));save();}
-let currentPage="dashboard", formData={name:"",gender:"Male",dob:"",place:"",mother:"",father:"",address:"",registration:"",registrationDate:"",issueDate:""}, selectedState="Maharashtra", selectedLangs=["English","Hindi","Marathi"];
 
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-function save(){localStorage.setItem("bpp_data",JSON.stringify(data));}
-function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
-function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-function optionsState(){return data.states.filter(s=>s.active).map(s=>`<option ${s.name===selectedState?"selected":""}>${escapeHtml(s.name)}</option>`).join("")}
-function availableLangs(){return stateLangs[selectedState]||["English","Hindi"];}
+const LANGUAGE_OPTIONS = ["English","Hindi","Marathi","Gujarati","Kannada","Tamil","Telugu","Bengali","Punjabi","Malayalam","Odia","Assamese","Konkani","Urdu","Nepali","Meitei","Mizo","Nagamese"];
+
+const DEFAULT_STATE_LANGS = {
+  "Maharashtra":["English","Hindi","Marathi"], "Gujarat":["English","Hindi","Gujarati"], "Karnataka":["English","Hindi","Kannada"],
+  "Tamil Nadu":["English","Hindi","Tamil"], "Telangana":["English","Hindi","Telugu"], "Andhra Pradesh":["English","Hindi","Telugu"],
+  "West Bengal":["English","Hindi","Bengali"], "Punjab":["English","Hindi","Punjabi"], "Kerala":["English","Hindi","Malayalam"],
+  "Odisha":["English","Hindi","Odia"], "Assam":["English","Hindi","Assamese"], "Goa":["English","Hindi","Marathi","Konkani"],
+  "Delhi":["English","Hindi"], "Jammu and Kashmir":["English","Hindi","Urdu"], "Puducherry":["English","Hindi","Tamil"]
+};
+
+const DEFAULT_FIELDS = [
+  {key:"name",label:"Name",type:"text",required:true},
+  {key:"gender",label:"Gender",type:"select",required:true,options:["Male","Female","Other"]},
+  {key:"dob",label:"Date of Birth",type:"date",required:true},
+  {key:"place",label:"Place of Birth",type:"text",required:true},
+  {key:"mother",label:"Name of Mother",type:"text",required:false},
+  {key:"father",label:"Name of Father",type:"text",required:false},
+  {key:"address",label:"Address of Parents",type:"textarea",required:false},
+  {key:"registration",label:"Registration Number",type:"text",required:false},
+  {key:"registrationDate",label:"Date of Registration",type:"date",required:false},
+  {key:"issueDate",label:"Date of Issue",type:"date",required:false}
+];
+
+const DEFAULT_WATERMARK = "DEMO • SAMPLE • NOT AN OFFICIAL GOVERNMENT DOCUMENT";
+
+function readJSON(key, fallback){
+  try { const v=JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch(e){ return fallback; }
+}
+function writeJSON(key,value){ localStorage.setItem(key,JSON.stringify(value)); }
+function esc(v=""){ return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m])); }
+function slug(v){ return String(v).toLowerCase().trim().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"") || "field"; }
+function uid(prefix="id"){ return prefix+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+let data = readJSON("bpp_data", null) || {
+  states: STATES.map(name=>({id:uid("st"),name,active:true})),
+  languages: STATES.map(state=>({id:uid("lg"),state,languages:DEFAULT_STATE_LANGS[state]||["English","Hindi"],active:true})),
+  templates: [{id:uid("tpl"),name:"Maharashtra Birth Certificate — Demo",state:"Maharashtra",description:"A4 learning/demo template based on the supplied visual reference. Not an official document.",active:true,updated:new Date().toLocaleString()}],
+  fields: DEFAULT_FIELDS,
+  history: [],
+  settings: {websiteName:"Birth Print Portal",logoText:"BP",defaultState:"Maharashtra",defaultLanguages:["English","Hindi","Marathi"],watermark:DEFAULT_WATERMARK,footerText:"NOT AN OFFICIAL GOVERNMENT DOCUMENT",maintenance:false}
+};
+
+// Normalize older project data without deleting it.
+data.states = Array.isArray(data.states)&&data.states.length ? data.states.map(x=>({id:x.id||uid("st"),name:x.name||"Unnamed State",active:x.active!==false})) : STATES.map(name=>({id:uid("st"),name,active:true}));
+data.languages = Array.isArray(data.languages)&&data.languages.length ? data.languages : STATES.map(state=>({id:uid("lg"),state,languages:DEFAULT_STATE_LANGS[state]||["English","Hindi"],active:true}));
+data.templates = Array.isArray(data.templates)&&data.templates.length ? data.templates : [{id:uid("tpl"),name:"Maharashtra Birth Certificate — Demo",state:"Maharashtra",description:"Demo template",active:true,updated:new Date().toLocaleString()}];
+data.fields = Array.isArray(data.fields)&&data.fields.length ? data.fields : DEFAULT_FIELDS;
+data.history = Array.isArray(data.history) ? data.history : [];
+data.settings = {...{websiteName:"Birth Print Portal",logoText:"BP",defaultState:"Maharashtra",defaultLanguages:["English","Hindi","Marathi"],watermark:DEFAULT_WATERMARK,footerText:"NOT AN OFFICIAL GOVERNMENT DOCUMENT",maintenance:false},...(data.settings||{})};
+writeJSON("bpp_data",data);
+
+let currentPage="dashboard";
+let selectedState=data.settings.defaultState;
+let selectedTemplate=data.templates.find(t=>t.active&&t.state===selectedState)?.id || data.templates.find(t=>t.active)?.id || data.templates[0]?.id;
+let selectedLangs=[...(data.settings.defaultLanguages||DEFAULT_STATE_LANGS[selectedState]||["English","Hindi"])];
+let formData={};
+let editingTemplateId=null;
+let editingFieldKey=null;
+let editingLanguageId=null;
+
+function save(){ writeJSON("bpp_data",data); }
+function toast(msg){ const t=document.getElementById("toast"); if(!t)return; t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
+function activeStates(){ return data.states.filter(s=>s.active); }
+function stateLanguages(state){ return data.languages.find(x=>x.state===state&&x.active)?.languages || DEFAULT_STATE_LANGS[state] || ["English","Hindi"]; }
+function activeTemplates(){ return data.templates.filter(t=>t.active); }
+function ensureFormDefaults(){ data.fields.forEach(f=>{if(formData[f.key]===undefined) formData[f.key]=f.key==="gender"?"Male":"";}); }
+ensureFormDefaults();
+
+function nav(page){ currentPage=page; document.querySelectorAll(".nav-item[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page)); render(); }
+function pageTitle(){ return {dashboard:"Dashboard",generator:"PDF Generator",templates:"Template Management",states:"State Management",languages:"Language Management",fields:"Form Builder",history:"Generated PDF History",settings:"Admin Settings"}[currentPage]||"Dashboard"; }
+
 function render(){
-  $("#pageTitle").textContent=({dashboard:"Dashboard",generator:"PDF Generator",templates:"Templates",states:"States",languages:"Languages",fields:"Form Fields",history:"PDF History",settings:"Settings"})[currentPage];
-  const c=$("#content"); c.innerHTML=pages[currentPage]();
-  bindPage();
+  const title=document.getElementById("pageTitle"); if(title) title.textContent=pageTitle();
+  const c=document.getElementById("content"); if(!c)return;
+  ({dashboard:renderDashboard,generator:renderGenerator,templates:renderTemplates,states:renderStates,languages:renderLanguages,fields:renderFields,history:renderHistory,settings:renderSettings}[currentPage]||renderDashboard)(c);
+  bindCommon();
 }
-const pages={
- dashboard(){return `<div class="page-head"><div><h3>Admin Dashboard</h3><p>Everything is managed from this single control center.</p></div><button class="primary" onclick="go('generator')">+ Create Demo PDF</button></div>
- <div class="grid stats">
-  <div class="card stat"><div class="label">Templates</div><div class="value">${data.templates.length}</div><div class="hint">Active system templates</div></div>
-  <div class="card stat"><div class="label">States / UTs</div><div class="value">${data.states.length}</div><div class="hint">India coverage</div></div>
-  <div class="card stat"><div class="label">Generated PDFs</div><div class="value">${data.history.length}</div><div class="hint">Saved in this browser</div></div>
-  <div class="card stat"><div class="label">Form Fields</div><div class="value">${data.fields.length}</div><div class="hint">Admin configurable</div></div>
- </div>
- <div class="grid two" style="margin-top:18px">
-  <div class="card"><h3>Quick Start</h3><p style="color:var(--muted)">Select a State and language combination, fill the demo form, preview the A4 layout and generate a clearly marked sample PDF.</p><div class="actions"><button class="primary" onclick="go('generator')">Open Generator</button><button class="secondary" onclick="go('templates')">Manage Templates</button></div></div>
-  <div class="card"><h3>System Status</h3><p>Frontend: <b>Ready</b></p><p>Local storage: <b>Connected</b></p><p>PDF library: <b>${jsPDF?"Loaded":"Waiting"}</b></p><p>Mode: <span class="pill">DEMO</span></p></div>
- </div>`},
- generator(){return `<div class="page-head"><div><h3>PDF Generator</h3><p>Build an educational sample document from the selected template.</p></div><button class="ghost" onclick="resetForm()">Reset</button></div>
- <div class="grid two">
-  <div class="card">
-   <div class="form-grid">
-    <div class="field"><label>State</label><select id="stateSelect">${optionsState()}</select></div>
-    <div class="field"><label>Template</label><select id="templateSelect">${data.templates.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join("")}</select></div>
-    <div class="field full-field"><label>Language Selection (multiple)</label><div class="check-list" id="langChecks">${availableLangs().map(l=>`<label class="check"><input type="checkbox" value="${l}" ${selectedLangs.includes(l)?"checked":""}>${l}</label>`).join("")}</div></div>
-    ${data.fields.map(f=>fieldHtml(f)).join("")}
-   </div>
-   <div class="actions" style="margin-top:16px"><button class="primary" id="generateBtn">Generate Demo PDF</button><button class="secondary" id="saveHistoryBtn">Save to History</button></div>
+
+function bindCommon(){
+  document.querySelectorAll(".nav-item[data-page]").forEach(b=>b.onclick=()=>nav(b.dataset.page));
+  const mm=document.getElementById("mobileMenu"); if(mm)mm.onclick=()=>document.querySelector(".sidebar")?.classList.toggle("open");
+  const clock=document.getElementById("clock"); if(clock)clock.textContent=new Date().toLocaleString();
+}
+
+function renderDashboard(c){
+  const activeS=activeStates().length, activeT=activeTemplates().length, hist=data.history.length;
+  c.innerHTML=`<div class="page-head"><div><h1>Admin Dashboard</h1><p>Birth Print Portal — complete demo administration.</p></div><div class="demo-badge">DEMO MODE</div></div>
+  <div class="stats-grid">
+    <div class="stat-card"><span>Active States / UTs</span><strong>${activeS}</strong></div>
+    <div class="stat-card"><span>Active Templates</span><strong>${activeT}</strong></div>
+    <div class="stat-card"><span>Form Fields</span><strong>${data.fields.length}</strong></div>
+    <div class="stat-card"><span>Generated History</span><strong>${hist}</strong></div>
   </div>
-  <div class="card"><div class="page-head"><div><h3>Live A4 Preview</h3><p>Updates as you fill the form.</p></div></div><div class="preview-wrap"><div class="paper" id="paper">${paperHtml()}</div></div></div>
- </div>`},
- templates(){return `<div class="page-head"><div><h3>Templates</h3><p>Manage demo templates used by the generator.</p></div><button class="primary" onclick="addTemplate()">+ Add Template</button></div>
- <div class="card table-wrap"><table class="table"><thead><tr><th>Template</th><th>State</th><th>Status</th><th>Actions</th></tr></thead><tbody>${data.templates.map(t=>`<tr><td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.state)}</td><td><span class="pill ${t.active?"":"off"}">${t.active?"Active":"Disabled"}</span></td><td><div class="actions"><button class="ghost" onclick="toggleTemplate(${t.id})">${t.active?"Disable":"Enable"}</button><button class="danger" onclick="deleteTemplate(${t.id})">Delete</button></div></td></tr>`).join("")}</tbody></table></div>`},
- states(){return `<div class="page-head"><div><h3>States & UTs</h3><p>${data.states.length} locations configured for template selection.</p></div><button class="primary" onclick="addState()">+ Add State / UT</button></div><div class="card table-wrap"><table class="table"><thead><tr><th>State / UT</th><th>Languages</th><th>Status</th><th>Actions</th></tr></thead><tbody>${data.states.map((s,i)=>`<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml((stateLangs[s.name]||["English","Hindi"]).join(" • "))}</td><td><span class="pill ${s.active?"":"off"}">${s.active?"Active":"Inactive"}</span></td><td><div class="actions"><button class="ghost" onclick="editState(${i})">Edit</button><button class="ghost" onclick="toggleState(${i})">${s.active?"Disable":"Enable"}</button><button class="danger" onclick="deleteState(${i})">Delete</button></div></td></tr>`).join("")}</tbody></table></div>`},
- languages(){const maps=languageMappings();return `<div class="page-head"><div><h3>Language Management</h3><p>Manage state-wise languages and multi-language combinations.</p></div><button class="primary" onclick="addLanguageMapping()">+ Add Language Mapping</button></div><div class="card table-wrap"><table class="table"><thead><tr><th>State / UT</th><th>Languages</th><th>Combinations</th><th>Status</th><th>Actions</th></tr></thead><tbody>${maps.map((m,i)=>{const combos=[];for(let a=0;a<m.languages.length;a++)for(let b=a+1;b<m.languages.length;b++)combos.push(m.languages[a]+" + "+m.languages[b]);return `<tr><td>${escapeHtml(m.state)}</td><td>${escapeHtml(m.languages.join(" • "))}</td><td>${escapeHtml(combos.join(" • ")||"Single language")}</td><td><span class="pill ${m.active?"":"off"}">${m.active?"Active":"Inactive"}</span></td><td><div class="actions"><button class="ghost" onclick="editLanguageMapping(${i})">Edit</button><button class="ghost" onclick="toggleLanguageMapping(${i})">${m.active?"Disable":"Enable"}</button><button class="danger" onclick="deleteLanguageMapping(${i})">Delete</button></div></td></tr>`}).join("")}</tbody></table></div>`},
- fields(){return `<div class="page-head"><div><h3>Form Fields</h3><p>Fields used by the PDF Generator.</p></div><button class="primary" onclick="addField()">+ Add Field</button></div>
- <div class="card table-wrap"><table class="table"><thead><tr><th>Label</th><th>Key</th><th>Type</th><th>Required</th><th>Action</th></tr></thead><tbody>${data.fields.map(f=>`<tr><td>${escapeHtml(f.label)}</td><td>${escapeHtml(f.key)}</td><td>${f.type}</td><td>${f.required?"Yes":"No"}</td><td><button class="danger" onclick="deleteField('${f.key}')">Delete</button></td></tr>`).join("")}</tbody></table></div>`},
- history(){return `<div class="page-head"><div><h3>Generated PDF History</h3><p>Saved locally in this browser.</p></div><button class="danger" onclick="clearHistory()">Clear History</button></div>
- <div class="card table-wrap"><table class="table"><thead><tr><th>Date</th><th>State</th><th>Languages</th><th>Name</th><th>Actions</th></tr></thead><tbody>${data.history.length?data.history.slice().reverse().map((h,i)=>`<tr><td>${escapeHtml(h.date)}</td><td>${escapeHtml(h.state)}</td><td>${escapeHtml(h.languages.join(" + "))}</td><td>${escapeHtml(h.name||"—")}</td><td><button class="danger" onclick="deleteHistory(${data.history.length-1-i})">Delete</button></td></tr>`).join(""):`<tr><td colspan="5">No PDFs saved yet.</td></tr>`}</tbody></table></div>`},
- settings(){return `<div class="page-head"><div><h3>Settings</h3><p>Basic portal and demo PDF settings.</p></div><button class="primary" onclick="saveSettings()">Save Settings</button></div>
- <div class="card form-grid"><div class="field"><label>Portal Name</label><input id="setLogo" value="${escapeHtml(data.settings.logoText)}"></div><div class="field"><label>Demo Watermark</label><input id="setWater" value="${escapeHtml(data.settings.watermark)}"></div><div class="field full-field"><label>Note</label><textarea disabled>This educational portal generates sample/demo PDFs only. Do not represent generated documents as official government records.</textarea></div></div>`}
-};
-function fieldHtml(f){
- let v=formData[f.key]||"";
- if(f.type==="textarea") return `<div class="field full-field"><label>${escapeHtml(f.label)}</label><textarea data-key="${f.key}" ${f.required?"required":""}>${escapeHtml(v)}</textarea></div>`;
- if(f.type==="select") return `<div class="field"><label>${escapeHtml(f.label)}</label><select data-key="${f.key}">${(f.options||["Male","Female","Other"]).map(o=>`<option ${v===o?"selected":""}>${o}</option>`).join("")}</select></div>`;
- return `<div class="field"><label>${escapeHtml(f.label)}</label><input data-key="${f.key}" type="${f.type}" value="${escapeHtml(v)}" ${f.required?"required":""}></div>`;
-}
-function paperHtml(){
- const langLine=selectedLangs.length?selectedLangs.join(" • "):"Select language";
- const label=(en,hi,mar)=>selectedLangs.includes("Marathi")?mar:(selectedLangs.includes("Hindi")?hi:en);
- return `<div class="watermark">${escapeHtml(data.settings.watermark)}</div>
- <div class="gov">DEMO / SAMPLE — ${escapeHtml(selectedState.toUpperCase())}</div>
- <div class="sub">${escapeHtml(data.settings.logoText)}</div>
- <div class="title">BIRTH CERTIFICATE</div><div class="sub">जन्म प्रमाण पत्र</div>
- <div class="small">Educational template — ${escapeHtml(langLine)}</div><div class="rule"></div>
- <div class="small" style="text-align:left"><b>${escapeHtml(label("This is a sample layout for learning PDF generation.","यह PDF generation सीखने के लिए नमूना लेआउट है।","हा PDF generation शिकण्यासाठी नमुना आराखडा आहे."))}</b></div>
- <div class="cert-grid" style="margin-top:12px">
-  <div><b>NAME / नाम / नाव</b>${escapeHtml(formData.name||"—")}</div>
-  <div><b>SEX / लिंग / लिंग</b>${escapeHtml(formData.gender||"—")}</div>
-  <div><b>DATE OF BIRTH / जन्म तिथि / जन्म तारीख</b>${escapeHtml(formData.dob||"—")}</div>
-  <div><b>PLACE OF BIRTH / जन्म स्थान / जन्मस्थळ</b>${escapeHtml(formData.place||"—")}</div>
-  <div><b>NAME OF MOTHER / माता का नाम / आईचे नाव</b>${escapeHtml(formData.mother||"—")}</div>
-  <div><b>NAME OF FATHER / पिता का नाम / वडिलांचे नाव</b>${escapeHtml(formData.father||"—")}</div>
-  <div class="wide"><b>ADDRESS / पता / पत्ता</b>${escapeHtml(formData.address||"—")}</div>
-  <div><b>REGISTRATION NUMBER / पंजीकरण संख्या / नोंदणी क्रमांक</b>${escapeHtml(formData.registration||"—")}</div>
-  <div><b>DATE OF REGISTRATION / पंजीकरण तारीख / नोंदणी तारीख</b>${escapeHtml(formData.registrationDate||"—")}</div>
-  <div><b>DATE OF ISSUE / जारी करने की तिथि / जारी तारीख</b>${escapeHtml(formData.issueDate||"—")}</div>
-  <div><b>STATE / राज्य / राज्य</b>${escapeHtml(selectedState)}</div>
- </div>
- <div class="paper-footer"><span>FORM 5 — DEMO TEMPLATE</span><span>NOT AN OFFICIAL GOVERNMENT DOCUMENT</span></div>`;
-}
-function collect(){
- $$("[data-key]").forEach(el=>formData[el.dataset.key]=el.value);
- selectedLangs=$$("#langChecks input:checked").map(x=>x.value);
- $("#paper").innerHTML=paperHtml();
-}
-function bindPage(){
- if(currentPage==="generator"){
-  $("#stateSelect").onchange=e=>{selectedState=e.target.value;selectedLangs=availableLangs();render()};
-  $$("[data-key]").forEach(el=>el.addEventListener("input",collect));
-  $$("#langChecks input").forEach(el=>el.addEventListener("change",collect));
-  $("#generateBtn").onclick=generatePdf;
-  $("#saveHistoryBtn").onclick=saveHistory;
- }
-}
-function go(page){currentPage=page;$$(".nav-item[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));render()}
-function resetForm(){formData={name:"",gender:"Male",dob:"",place:"",mother:"",father:"",address:"",registration:"",registrationDate:"",issueDate:""};render();toast("Form reset")}
-
-function languageMappings(){
- const defaults={...stateLangs};
- const saved=JSON.parse(localStorage.getItem("bpp_language_mappings")||"null");
- if(saved&&Array.isArray(saved)) return saved;
- const maps=STATES.map(state=>({state,languages:defaults[state]||["English","Hindi"],active:true}));
- localStorage.setItem("bpp_language_mappings",JSON.stringify(maps)); return maps;
-}
-function saveLanguageMappings(m){localStorage.setItem("bpp_language_mappings",JSON.stringify(m));}
-function addLanguageMapping(){
- const maps=languageMappings(); const state=prompt("State / UT", "Maharashtra"); if(!state)return;
- if(maps.some(x=>x.state.toLowerCase()===state.trim().toLowerCase()))return toast("Mapping already exists");
- const langs=prompt("Languages (comma separated)","English,Hindi,Marathi"); if(!langs)return;
- const list=langs.split(",").map(x=>x.trim()).filter(Boolean); if(!list.length)return toast("Select at least one language");
- maps.push({state:state.trim(),languages:[...new Set(list)],active:true}); saveLanguageMappings(maps); render(); toast("Language mapping added");
-}
-function editLanguageMapping(i){
- const maps=languageMappings(), x=maps[i]; if(!x)return;
- const state=prompt("Edit State / UT",x.state); if(!state)return;
- const langs=prompt("Languages (comma separated)",x.languages.join(",")); if(!langs)return;
- const list=langs.split(",").map(v=>v.trim()).filter(Boolean); if(!list.length)return toast("Select at least one language");
- x.state=state.trim(); x.languages=[...new Set(list)]; saveLanguageMappings(maps); render(); toast("Language mapping updated");
-}
-function toggleLanguageMapping(i){const m=languageMappings();m[i].active=!m[i].active;saveLanguageMappings(m);render();toast(m[i].active?"Language mapping enabled":"Language mapping disabled");}
-function deleteLanguageMapping(i){const m=languageMappings();if(m.length<=1)return toast("Keep at least one mapping");if(confirm("Delete this language mapping?")){m.splice(i,1);saveLanguageMappings(m);render();toast("Language mapping deleted")}}
-
-function addState(){const name=prompt("State / UT name");if(!name)return;const clean=name.trim();if(!clean)return;if(data.states.some(s=>s.name.toLowerCase()===clean.toLowerCase()))return toast("State already exists");data.states.push({name:clean,active:true});save();render();toast("State added")}
-function editState(i){const old=data.states[i];const name=prompt("Edit State / UT",old.name);if(!name)return;const clean=name.trim();if(!clean)return;if(data.states.some((s,j)=>j!==i&&s.name.toLowerCase()===clean.toLowerCase()))return toast("State already exists");old.name=clean;save();render();toast("State updated")}
-function toggleState(i){data.states[i].active=!data.states[i].active;save();render();toast(data.states[i].active?"State enabled":"State disabled")}
-function deleteState(i){if(data.states.length<=1)return toast("Keep at least one State / UT");const name=data.states[i].name;if(confirm("Delete "+name+"?")){data.states.splice(i,1);if(selectedState===name){selectedState=data.states.find(s=>s.active)?.name||data.states[0].name;selectedLangs=availableLangs()}save();render();toast("State deleted")}}
-function addTemplate(){const name=prompt("Template name","New Birth Certificate Demo");if(!name)return;data.templates.push({id:Date.now(),name,state:selectedState,active:true});save();render();toast("Template added")}
-function toggleTemplate(id){const t=data.templates.find(x=>x.id===id);if(t){t.active=!t.active;save();render()}}
-function deleteTemplate(id){if(data.templates.length===1)return toast("Keep at least one template");if(confirm("Delete this template?")){data.templates=data.templates.filter(x=>x.id!==id);save();render();}}
-function addField(){const label=prompt("Field label","New Field");if(!label)return;const key=label.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");if(data.fields.some(f=>f.key===key))return toast("Field already exists");data.fields.push({key,label,type:"text",required:false});save();render();toast("Field added")}
-function deleteField(key){if(data.fields.length<=1)return toast("Keep at least one field");data.fields=data.fields.filter(f=>f.key!==key);delete formData[key];save();render()}
-function saveHistory(){collect();data.history.push({date:new Date().toLocaleString(),state:selectedState,languages:[...selectedLangs],name:formData.name,form:{...formData}});save();toast("Saved to history")}
-function clearHistory(){if(confirm("Clear all local history?")){data.history=[];save();render()}}
-function deleteHistory(i){data.history.splice(i,1);save();render()}
-function saveSettings(){data.settings.logoText=$("#setLogo").value;data.settings.watermark=$("#setWater").value;save();toast("Settings saved")}
-function generatePdf(){
- collect(); if(!jsPDF)return toast("PDF library not loaded");
- const doc=new jsPDF({unit:"pt",format:"a4"}), w=doc.internal.pageSize.getWidth(), h=doc.internal.pageSize.getHeight();
- doc.setTextColor(20,30,45);doc.setFont("helvetica","bold");doc.setFontSize(16);doc.text("BIRTH CERTIFICATE",w/2,60,{align:"center"});
- doc.setFontSize(10);doc.text("DEMO / SAMPLE — "+selectedState.toUpperCase(),w/2,78,{align:"center"});
- doc.setFont("helvetica","normal");doc.setFontSize(8);doc.text("Language: "+(selectedLangs.join(" + ")||"Not selected"),w/2,94,{align:"center"});
- doc.setDrawColor(30);doc.line(42,108,w-42,108);
- let y=130; const rows=[
-  ["Name",formData.name],["Gender",formData.gender],["Date of Birth",formData.dob],["Place of Birth",formData.place],
-  ["Name of Mother",formData.mother],["Name of Father",formData.father],["Address",formData.address],
-  ["Registration Number",formData.registration],["Date of Registration",formData.registrationDate],["Date of Issue",formData.issueDate],["State",selectedState]
- ];
- doc.setFontSize(9);
- rows.forEach(([k,v])=>{doc.setFont("helvetica","bold");doc.text(k,55,y);doc.setFont("helvetica","normal");doc.text(String(v||"—").slice(0,100),190,y);doc.line(45,y+8,w-45,y+8);y+=38});
- doc.setTextColor(210,55,55);doc.setFont("helvetica","bold");doc.setFontSize(28);doc.text("DEMO • SAMPLE",w/2,h/2,{align:"center",angle:25});
- doc.setTextColor(70);doc.setFontSize(8);doc.text("NOT AN OFFICIAL GOVERNMENT DOCUMENT",w/2,h-35,{align:"center"});
- doc.save("birth-print-demo.pdf"); saveHistory(); toast("Demo PDF downloaded");
+  <div class="panel-grid">
+    <div class="panel"><h3>Workflow</h3><div class="workflow"><span>State</span>→<span>Language</span>→<span>Template</span>→<span>Form</span>→<span>A4 Preview</span>→<span>Demo PDF</span></div></div>
+    <div class="panel"><h3>Quick Actions</h3><div class="quick-actions"><button class="btn primary" data-go="generator">Open PDF Generator</button><button class="btn" data-go="templates">Manage Templates</button><button class="btn" data-go="states">Manage States</button></div></div>
+  </div>
+  <div class="notice"><strong>Important:</strong> Every generated document is clearly marked DEMO/SAMPLE and NOT AN OFFICIAL GOVERNMENT DOCUMENT.</div>`;
+  c.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>nav(b.dataset.go));
 }
 
-$$(".nav-item[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
-$("#mobileMenu").onclick=()=>$(".sidebar").classList.toggle("open");
-setInterval(()=>$("#clock").textContent=new Date().toLocaleString(),1000);
+function renderStates(c){
+  c.innerHTML=`<div class="page-head"><div><h1>State Management</h1><p>Manage all 28 States and 8 Union Territories.</p></div><button class="btn primary" id="addState">+ Add State / UT</button></div>
+  <div class="toolbar"><input id="stateSearch" placeholder="Search state / UT"><select id="stateFilter"><option value="all">All</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+  <div class="table-wrap"><table><thead><tr><th>State / UT</th><th>Status</th><th>Actions</th></tr></thead><tbody id="stateRows"></tbody></table></div>`;
+  const draw=()=>{const q=(c.querySelector("#stateSearch").value||"").toLowerCase(),f=c.querySelector("#stateFilter").value; c.querySelector("#stateRows").innerHTML=data.states.filter(s=>(!q||s.name.toLowerCase().includes(q))&&(f==="all"||(f==="active"?s.active:!s.active))).map((s,i)=>`<tr><td>${esc(s.name)}</td><td><span class="status ${s.active?"active":"inactive"}">${s.active?"Active":"Inactive"}</span></td><td><button class="btn small" data-edit="${s.id}">Edit</button> <button class="btn small" data-toggle="${s.id}">${s.active?"Deactivate":"Activate"}</button> <button class="btn small danger" data-delete="${s.id}">Delete</button></td></tr>`).join("")||`<tr><td colspan="3">No states found.</td></tr>`; c.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editState(b.dataset.edit)); c.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>toggleState(b.dataset.toggle)); c.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>deleteState(b.dataset.delete));};
+  c.querySelector("#addState").onclick=addState; c.querySelector("#stateSearch").oninput=draw;c.querySelector("#stateFilter").onchange=draw;draw();
+}
+function addState(){const n=prompt("State / UT name");if(!n)return;const name=n.trim();if(data.states.some(s=>s.name.toLowerCase()===name.toLowerCase()))return toast("State already exists");data.states.push({id:uid("st"),name,active:true});data.languages.push({id:uid("lg"),state:name,languages:["English","Hindi"],active:true});save();render();toast("State added");}
+function editState(id){const s=data.states.find(x=>x.id===id);if(!s)return;const n=prompt("Edit State / UT",s.name);if(!n)return;const name=n.trim();if(data.states.some(x=>x.id!==id&&x.name.toLowerCase()===name.toLowerCase()))return toast("State already exists");const old=s.name;s.name=name;const lm=data.languages.find(x=>x.state===old);if(lm)lm.state=name;save();render();toast("State updated");}
+function toggleState(id){const s=data.states.find(x=>x.id===id);if(!s)return;s.active=!s.active;save();render();toast(s.active?"State activated":"State deactivated");}
+function deleteState(id){if(data.states.length<=1)return toast("Keep at least one state");const s=data.states.find(x=>x.id===id);if(!s)return;if(!confirm(`Delete ${s.name}?`))return;data.states=data.states.filter(x=>x.id!==id);data.languages=data.languages.filter(x=>x.state!==s.name);save();render();toast("State deleted");}
+
+function renderLanguages(c){
+  c.innerHTML=`<div class="page-head"><div><h1>Language Management</h1><p>Configure state-wise languages and selectable combinations.</p></div><button class="btn primary" id="addLanguage">+ Add Mapping</button></div>
+  <div class="toolbar"><input id="languageSearch" placeholder="Search state or language"><select id="languageFilter"><option value="all">All</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+  <div class="cards" id="languageCards"></div>`;
+  const draw=()=>{const q=(c.querySelector("#languageSearch").value||"").toLowerCase(),f=c.querySelector("#languageFilter").value;c.querySelector("#languageCards").innerHTML=data.languages.filter(x=>(!q||x.state.toLowerCase().includes(q)||x.languages.some(l=>l.toLowerCase().includes(q)))&&(f==="all"||(f==="active"?x.active:!x.active))).map(x=>{const combos=[];for(let i=0;i<x.languages.length;i++)for(let j=i+1;j<x.languages.length;j++)combos.push(x.languages[i]+" + "+x.languages[j]);return `<div class="card"><div class="card-head"><div><h3>${esc(x.state)}</h3><p>${x.languages.length} language(s)</p></div><span class="status ${x.active?"active":"inactive"}">${x.active?"Active":"Inactive"}</span></div><div class="chips">${x.languages.map(l=>`<span>${esc(l)}</span>`).join("")}</div><small>Combinations: ${combos.length?combos.map(esc).join(" • "):"Single language"}</small><div class="actions"><button class="btn small" data-edit="${x.id}">Edit</button><button class="btn small" data-toggle="${x.id}">${x.active?"Deactivate":"Activate"}</button><button class="btn small danger" data-delete="${x.id}">Delete</button></div></div>`}).join("")||`<div class="panel">No mappings found.</div>`;c.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editLanguage(b.dataset.edit));c.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>toggleLanguage(b.dataset.toggle));c.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>deleteLanguage(b.dataset.delete));};
+  c.querySelector("#addLanguage").onclick=()=>openLanguageEditor();c.querySelector("#languageSearch").oninput=draw;c.querySelector("#languageFilter").onchange=draw;draw();
+}
+function openLanguageEditor(id=null){editingLanguageId=id;const x=id?data.languages.find(v=>v.id===id):null;const state=prompt("State / UT",x?.state||selectedState);if(!state)return;const langs=prompt("Languages, comma separated",(x?.languages||stateLanguages(state)).join(","));if(!langs)return;const list=[...new Set(langs.split(",").map(v=>v.trim()).filter(v=>LANGUAGE_OPTIONS.includes(v)))];if(!list.length)return toast("Use supported language names");if(x){x.state=state.trim();x.languages=list;x.active=true;}else{if(data.languages.some(v=>v.state.toLowerCase()===state.trim().toLowerCase()))return toast("Mapping already exists");data.languages.push({id:uid("lg"),state:state.trim(),languages:list,active:true});}save();render();toast(id?"Language mapping updated":"Language mapping added");editingLanguageId=null;}
+function editLanguage(id){openLanguageEditor(id)}
+function toggleLanguage(id){const x=data.languages.find(v=>v.id===id);if(!x)return;x.active=!x.active;save();render();}
+function deleteLanguage(id){if(data.languages.length<=1)return toast("Keep at least one mapping");if(confirm("Delete this language mapping?")){data.languages=data.languages.filter(v=>v.id!==id);save();render();}}
+
+function renderTemplates(c){
+  c.innerHTML=`<div class="page-head"><div><h1>Template Management</h1><p>Add, edit, enable/disable and delete A4 demo templates.</p></div><button class="btn primary" id="addTemplate">+ Add Template</button></div>
+  <div class="table-wrap"><table><thead><tr><th>Template</th><th>State</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead><tbody>${data.templates.map(t=>`<tr><td><strong>${esc(t.name)}</strong><br><small>${esc(t.description||"")}</small></td><td>${esc(t.state)}</td><td><span class="status ${t.active?"active":"inactive"}">${t.active?"Active":"Inactive"}</span></td><td>${esc(t.updated||"")}</td><td><button class="btn small" data-edit="${t.id}">Edit</button> <button class="btn small" data-toggle="${t.id}">${t.active?"Disable":"Enable"}</button> <button class="btn small danger" data-delete="${t.id}">Delete</button></td></tr>`).join("")}</tbody></table></div>`;
+  c.querySelector("#addTemplate").onclick=()=>templateEditor();c.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>templateEditor(b.dataset.edit));c.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>{const t=data.templates.find(x=>x.id===b.dataset.toggle);t.active=!t.active;save();render()});c.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>{if(data.templates.length<=1)return toast("Keep at least one template");if(confirm("Delete template?")){data.templates=data.templates.filter(x=>x.id!==b.dataset.delete);save();render();}});
+}
+function templateEditor(id=null){const t=id?data.templates.find(x=>x.id===id):null;const name=prompt("Template name",t?.name||"Birth Certificate Demo");if(!name)return;const state=prompt("State / UT",t?.state||selectedState);if(!state)return;const desc=prompt("Template description",t?.description||"A4 demo template — not an official document.");if(desc===null)return;if(t){t.name=name.trim();t.state=state.trim();t.description=desc;t.updated=new Date().toLocaleString();}else data.templates.push({id:uid("tpl"),name:name.trim(),state:state.trim(),description:desc,active:true,updated:new Date().toLocaleString()});save();render();toast(id?"Template updated":"Template added");}
+
+function renderFields(c){
+  c.innerHTML=`<div class="page-head"><div><h1>Form Builder</h1><p>Manage generator fields and required/optional status.</p></div><button class="btn primary" id="addField">+ Add Field</button></div>
+  <div class="table-wrap"><table><thead><tr><th>Label</th><th>Key</th><th>Type</th><th>Required</th><th>Actions</th></tr></thead><tbody>${data.fields.map(f=>`<tr><td>${esc(f.label)}</td><td><code>${esc(f.key)}</code></td><td>${esc(f.type)}</td><td><span class="status ${f.required?"active":"inactive"}">${f.required?"Required":"Optional"}</span></td><td><button class="btn small" data-edit="${esc(f.key)}">Edit</button> <button class="btn small danger" data-delete="${esc(f.key)}">Delete</button></td></tr>`).join("")}</tbody></table></div>`;
+  c.querySelector("#addField").onclick=()=>fieldEditor();c.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>fieldEditor(b.dataset.edit));c.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>{if(data.fields.length<=1)return toast("Keep at least one field");if(confirm("Delete field?")){data.fields=data.fields.filter(f=>f.key!==b.dataset.delete);delete formData[b.dataset.delete];save();render();}});
+}
+function fieldEditor(key=null){const f=key?data.fields.find(x=>x.key===key):null;const label=prompt("Field label",f?.label||"New Field");if(!label)return;const type=prompt("Type: text, date, textarea, select",f?.type||"text");if(!type)return;const required=confirm("Make this field required?");let options=f?.options||[];if(type==="select"){const raw=prompt("Dropdown options, comma separated",options.join(",")||"Male,Female,Other");if(raw===null)return;options=raw.split(",").map(v=>v.trim()).filter(Boolean);}const newKey=f?f.key:slug(label);if(!f&&data.fields.some(x=>x.key===newKey))return toast("Field already exists");if(f){f.label=label.trim();f.type=type;f.required=required;f.options=options;}else data.fields.push({key:newKey,label:label.trim(),type,required,options});save();ensureFormDefaults();render();toast(key?"Field updated":"Field added");}
+
+function renderGenerator(c){
+  const activeS=activeStates();if(!activeS.length){c.innerHTML=`<div class="notice">Activate at least one State / UT first.</div>`;return;}
+  if(!activeS.some(s=>s.name===selectedState))selectedState=activeS[0].name;
+  const langs=stateLanguages(selectedState);selectedLangs=selectedLangs.filter(x=>langs.includes(x));if(!selectedLangs.length)selectedLangs=[langs[0]||"English"];
+  const templates=activeTemplates().filter(t=>t.state===selectedState||t.state==="All States");if(!templates.some(t=>t.id===selectedTemplate))selectedTemplate=templates[0]?.id||activeTemplates()[0]?.id;
+  ensureFormDefaults();
+  c.innerHTML=`<div class="page-head"><div><h1>PDF Generator</h1><p>Fill the demo form and preview an A4 document before generating.</p></div><div><button class="btn" id="resetForm">Reset</button></div></div>
+  <div class="generator-grid"><div class="panel"><h3>Document Settings</h3><div class="field-grid"><div class="field"><label>State / UT</label><select id="genState">${activeS.map(s=>`<option ${s.name===selectedState?"selected":""}>${esc(s.name)}</option>`).join("")}</select></div><div class="field"><label>Template</label><select id="genTemplate">${templates.map(t=>`<option value="${t.id}" ${t.id===selectedTemplate?"selected":""}>${esc(t.name)}</option>`).join("")}</select></div></div><div class="field"><label>Languages</label><div class="check-grid">${langs.map(l=>`<label><input type="checkbox" class="lang-check" value="${esc(l)}" ${selectedLangs.includes(l)?"checked":""}> ${esc(l)}</label>`).join("")}</div></div><h3>Form Fields</h3><div class="field-grid">${data.fields.map(fieldHtml).join("")}</div><div class="actions"><button class="btn primary" id="generateBtn">Generate Demo PDF</button><button class="btn" id="saveHistoryBtn">Save to History</button></div></div>
+  <div class="panel preview-panel"><div class="preview-head"><h3>Live A4 Preview</h3><span>Scale preview</span></div><div class="a4-wrap"><div id="paper" class="a4-paper">${paperHtml()}</div></div></div></div>`;
+  c.querySelector("#genState").onchange=e=>{selectedState=e.target.value;selectedLangs=stateLanguages(selectedState);selectedTemplate=activeTemplates().find(t=>t.state===selectedState)?.id||activeTemplates()[0]?.id;render();};
+  c.querySelector("#genTemplate").onchange=e=>{selectedTemplate=e.target.value;updatePreview();};
+  c.querySelectorAll("[data-key]").forEach(el=>el.oninput=()=>{formData[el.dataset.key]=el.value;updatePreview();});
+  c.querySelectorAll(".lang-check").forEach(el=>el.onchange=()=>{selectedLangs=[...c.querySelectorAll(".lang-check:checked")].map(x=>x.value);updatePreview();});
+  c.querySelector("#generateBtn").onclick=generatePdf;c.querySelector("#saveHistoryBtn").onclick=saveHistory;c.querySelector("#resetForm").onclick=()=>{formData={};ensureFormDefaults();render();toast("Form reset")};
+}
+function fieldHtml(f){const v=formData[f.key]??"";if(f.type==="textarea")return `<div class="field wide"><label>${esc(f.label)} ${f.required?"*":""}</label><textarea data-key="${esc(f.key)}" ${f.required?"required":""}>${esc(v)}</textarea></div>`;if(f.type==="select")return `<div class="field"><label>${esc(f.label)} ${f.required?"*":""}</label><select data-key="${esc(f.key)}">${(f.options||["Male","Female","Other"]).map(o=>`<option ${v===o?"selected":""}>${esc(o)}</option>`).join("")}</select></div>`;return `<div class="field"><label>${esc(f.label)} ${f.required?"*":""}</label><input data-key="${esc(f.key)}" type="${f.type==="date"?"date":"text"}" value="${esc(v)}" ${f.required?"required":""}></div>`;}
+function paperHtml(){const t=data.templates.find(x=>x.id===selectedTemplate);const state=selectedState;return `<div class="paper-watermark">${esc(data.settings.watermark)}</div><div class="paper-head"><strong>${esc(data.settings.websiteName)}</strong><span>DEMO / SAMPLE</span></div><div class="paper-state">${esc(state.toUpperCase())}</div><h2>BIRTH CERTIFICATE</h2><div class="paper-sub">जन्म प्रमाण पत्र • SAMPLE EDUCATIONAL TEMPLATE</div><div class="paper-rule"></div><div class="paper-note">This is a demo layout for learning PDF generation. It is not an official government document.</div><div class="paper-table">${data.fields.map(f=>`<div class="paper-cell"><b>${esc(f.label)}</b><span>${esc(formData[f.key]||"—")}</span></div>`).join("")}<div class="paper-cell"><b>State / UT</b><span>${esc(state)}</span></div><div class="paper-cell"><b>Languages</b><span>${esc(selectedLangs.join(" + ")||"—")}</span></div></div><div class="paper-footer"><span>${esc(t?.name||"Demo Template")}</span><strong>${esc(data.settings.footerText)}</strong></div></div>`;}
+function updatePreview(){const p=document.getElementById("paper");if(p)p.innerHTML=paperHtml();}
+function validateRequired(){for(const f of data.fields){if(f.required&&!String(formData[f.key]||"").trim()){toast(`${f.label} is required`);return false;}}return true;}
+function saveHistory(){if(!validateRequired())return;data.history.unshift({id:uid("hist"),date:new Date().toLocaleString(),state:selectedState,templateId:selectedTemplate,languages:[...selectedLangs],name:formData.name||"",form:{...formData}});save();toast("Saved to PDF History");}
+function generatePdf(){if(!validateRequired())return;if(!jsPDF){toast("PDF library not loaded");return;}const doc=new jsPDF({unit:"pt",format:"a4"}),w=doc.internal.pageSize.getWidth(),h=doc.internal.pageSize.getHeight();doc.setFont("helvetica","bold");doc.setFontSize(18);doc.text("BIRTH CERTIFICATE",w/2,55,{align:"center"});doc.setFontSize(9);doc.text("DEMO / SAMPLE — "+selectedState.toUpperCase(),w/2,72,{align:"center"});doc.setFont("helvetica","normal");doc.text("Languages: "+(selectedLangs.join(" + ")||"Not selected"),w/2,88,{align:"center"});doc.line(42,102,w-42,102);let y=125;data.fields.forEach(f=>{doc.setFont("helvetica","bold");doc.setFontSize(9);doc.text(f.label,55,y);doc.setFont("helvetica","normal");doc.text(String(formData[f.key]||"—").slice(0,105),205,y);doc.line(45,y+8,w-45,y+8);y+=34;if(y>h-100){doc.addPage();y=55;}});doc.setTextColor(205,50,50);doc.setFont("helvetica","bold");doc.setFontSize(24);doc.text("DEMO • SAMPLE",w/2,h/2,{align:"center",angle:25});doc.setFontSize(8);doc.text(data.settings.footerText,w/2,h-30,{align:"center"});const filename="birth-print-demo-"+new Date().toISOString().slice(0,10)+".pdf";doc.save(filename);saveHistory();toast("Demo PDF generated");}
+
+function renderHistory(c){c.innerHTML=`<div class="page-head"><div><h1>Generated PDF History</h1><p>Local browser history of generated/saved demo documents.</p></div><button class="btn danger" id="clearHistory">Clear History</button></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Name</th><th>State</th><th>Languages</th><th>Actions</th></tr></thead><tbody>${data.history.map(h=>`<tr><td>${esc(h.date)}</td><td>${esc(h.name||"—")}</td><td>${esc(h.state)}</td><td>${esc((h.languages||[]).join(" + "))}</td><td><button class="btn small" data-preview="${h.id}">Preview</button> <button class="btn small danger" data-delete="${h.id}">Delete</button></td></tr>`).join("")||`<tr><td colspan="5">No history yet.</td></tr>`}</tbody></table></div>`;c.querySelector("#clearHistory").onclick=()=>{if(confirm("Clear all history?")){data.history=[];save();render();}};c.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>{data.history=data.history.filter(h=>h.id!==b.dataset.delete);save();render();});c.querySelectorAll("[data-preview]").forEach(b=>b.onclick=()=>{const h=data.history.find(x=>x.id===b.dataset.preview);if(!h)return;selectedState=h.state;selectedTemplate=h.templateId;selectedLangs=h.languages||["English"];formData={...(h.form||{})};nav("generator");});}
+
+function renderSettings(c){c.innerHTML=`<div class="page-head"><div><h1>Admin Settings</h1><p>Control portal name, defaults, PDF watermark and demo mode.</p></div></div><div class="panel settings-form"><div class="field-grid"><div class="field"><label>Website Name</label><input id="setName" value="${esc(data.settings.websiteName)}"></div><div class="field"><label>Logo Text</label><input id="setLogo" value="${esc(data.settings.logoText)}"></div><div class="field"><label>Default State</label><select id="setState">${STATES.map(s=>`<option ${data.settings.defaultState===s?"selected":""}>${esc(s)}</option>`).join("")}</select></div><div class="field"><label>Demo Watermark</label><input id="setWatermark" value="${esc(data.settings.watermark)}"></div><div class="field wide"><label>PDF Footer</label><input id="setFooter" value="${esc(data.settings.footerText)}"></div><div class="field wide"><label>Default Languages</label><div class="check-grid" id="defaultLangs">${LANGUAGE_OPTIONS.map(l=>`<label><input type="checkbox" value="${esc(l)}" ${(data.settings.defaultLanguages||[]).includes(l)?"checked":""}> ${esc(l)}</label>`).join("")}</div></div></div><div class="actions"><button class="btn primary" id="saveSettings">Save Settings</button><button class="btn" id="resetSettings">Reset Defaults</button></div><div class="notice">Maintenance mode is available as an admin setting. This demo stores settings locally in the browser.</div></div><div class="panel"><h3>Deployment — Point 12</h3><p>Static deployment is supported on GitHub Pages. Upload the project files to the repository root, enable Pages from the repository settings, and use the generated Pages URL. A custom domain can be connected later.</p><p><strong>Current storage:</strong> browser localStorage/sessionStorage. No external database is required for this free demo build.</p></div>`;c.querySelector("#saveSettings").onclick=()=>{data.settings.websiteName=c.querySelector("#setName").value.trim()||"Birth Print Portal";data.settings.logoText=c.querySelector("#setLogo").value.trim()||"BP";data.settings.defaultState=c.querySelector("#setState").value;data.settings.watermark=c.querySelector("#setWatermark").value.trim()||DEFAULT_WATERMARK;data.settings.footerText=c.querySelector("#setFooter").value.trim()||"NOT AN OFFICIAL GOVERNMENT DOCUMENT";data.settings.defaultLanguages=[...c.querySelectorAll("#defaultLangs input:checked")].map(x=>x.value);save();toast("Settings saved");};c.querySelector("#resetSettings").onclick=()=>{if(confirm("Reset settings?")){data.settings={websiteName:"Birth Print Portal",logoText:"BP",defaultState:"Maharashtra",defaultLanguages:["English","Hindi","Marathi"],watermark:DEFAULT_WATERMARK,footerText:"NOT AN OFFICIAL GOVERNMENT DOCUMENT",maintenance:false};save();render();}};}
+
+// Navigation and logout are bound here. Login itself is handled only in index.html.
+document.querySelectorAll(".nav-item[data-page]").forEach(b=>b.addEventListener("click",()=>nav(b.dataset.page)));
+const logout=document.getElementById("logoutBtn");
+if(logout) logout.addEventListener("click",()=>{sessionStorage.clear();location.reload();});
+setInterval(()=>{const c=document.getElementById("clock");if(c)c.textContent=new Date().toLocaleString();},1000);
+render();
