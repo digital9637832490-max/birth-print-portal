@@ -19,16 +19,18 @@ const stateLangs = {
  "Punjab":["English","Hindi","Punjabi"],"Kerala":["English","Hindi","Malayalam"],"Odisha":["English","Hindi","Odia"],"Assam":["English","Hindi","Assamese"]
 };
 let data = JSON.parse(localStorage.getItem("bpp_data")||"null") || {
+ states: STATES.map(name=>({name,active:true})),
  templates:[{id:1,name:"Birth Certificate — Maharashtra Demo",state:"Maharashtra",active:true}],
  fields:defaultFields, history:[], settings:{logoText:"Birth Print Portal",watermark:"DEMO • SAMPLE • NOT AN OFFICIAL GOVERNMENT DOCUMENT"}
 };
+if(!Array.isArray(data.states)||!data.states.length){data.states=STATES.map(name=>({name,active:true}));save();}
 let currentPage="dashboard", formData={name:"",gender:"Male",dob:"",place:"",mother:"",father:"",address:"",registration:"",registrationDate:"",issueDate:""}, selectedState="Maharashtra", selectedLangs=["English","Hindi","Marathi"];
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 function save(){localStorage.setItem("bpp_data",JSON.stringify(data));}
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
 function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-function optionsState(){return STATES.map(s=>`<option ${s===selectedState?"selected":""}>${s}</option>`).join("")}
+function optionsState(){return data.states.filter(s=>s.active).map(s=>`<option ${s.name===selectedState?"selected":""}>${escapeHtml(s.name)}</option>`).join("")}
 function availableLangs(){return stateLangs[selectedState]||["English","Hindi"];}
 function render(){
   $("#pageTitle").textContent=({dashboard:"Dashboard",generator:"PDF Generator",templates:"Templates",states:"States",languages:"Languages",fields:"Form Fields",history:"PDF History",settings:"Settings"})[currentPage];
@@ -39,7 +41,7 @@ const pages={
  dashboard(){return `<div class="page-head"><div><h3>Admin Dashboard</h3><p>Everything is managed from this single control center.</p></div><button class="primary" onclick="go('generator')">+ Create Demo PDF</button></div>
  <div class="grid stats">
   <div class="card stat"><div class="label">Templates</div><div class="value">${data.templates.length}</div><div class="hint">Active system templates</div></div>
-  <div class="card stat"><div class="label">States / UTs</div><div class="value">${STATES.length}</div><div class="hint">India coverage</div></div>
+  <div class="card stat"><div class="label">States / UTs</div><div class="value">${data.states.length}</div><div class="hint">India coverage</div></div>
   <div class="card stat"><div class="label">Generated PDFs</div><div class="value">${data.history.length}</div><div class="hint">Saved in this browser</div></div>
   <div class="card stat"><div class="label">Form Fields</div><div class="value">${data.fields.length}</div><div class="hint">Admin configurable</div></div>
  </div>
@@ -62,7 +64,7 @@ const pages={
  </div>`},
  templates(){return `<div class="page-head"><div><h3>Templates</h3><p>Manage demo templates used by the generator.</p></div><button class="primary" onclick="addTemplate()">+ Add Template</button></div>
  <div class="card table-wrap"><table class="table"><thead><tr><th>Template</th><th>State</th><th>Status</th><th>Actions</th></tr></thead><tbody>${data.templates.map(t=>`<tr><td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.state)}</td><td><span class="pill ${t.active?"":"off"}">${t.active?"Active":"Disabled"}</span></td><td><div class="actions"><button class="ghost" onclick="toggleTemplate(${t.id})">${t.active?"Disable":"Enable"}</button><button class="danger" onclick="deleteTemplate(${t.id})">Delete</button></div></td></tr>`).join("")}</tbody></table></div>`},
- states(){return `<div class="page-head"><div><h3>States & UTs</h3><p>${STATES.length} locations available for template selection.</p></div></div><div class="card"><div class="check-list">${STATES.map(s=>`<div class="check">${escapeHtml(s)}<br><small style="color:var(--muted)">${(stateLangs[s]||["English","Hindi"]).join(" • ")}</small></div>`).join("")}</div></div>`},
+ states(){return `<div class="page-head"><div><h3>States & UTs</h3><p>${data.states.length} locations configured for template selection.</p></div><button class="primary" onclick="addState()">+ Add State / UT</button></div><div class="card table-wrap"><table class="table"><thead><tr><th>State / UT</th><th>Languages</th><th>Status</th><th>Actions</th></tr></thead><tbody>${data.states.map((s,i)=>`<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml((stateLangs[s.name]||["English","Hindi"]).join(" • "))}</td><td><span class="pill ${s.active?"":"off"}">${s.active?"Active":"Inactive"}</span></td><td><div class="actions"><button class="ghost" onclick="editState(${i})">Edit</button><button class="ghost" onclick="toggleState(${i})">${s.active?"Disable":"Enable"}</button><button class="danger" onclick="deleteState(${i})">Delete</button></div></td></tr>`).join("")}</tbody></table></div>`},
  languages(){return `<div class="page-head"><div><h3>Languages</h3><p>Language combinations are selected per document.</p></div></div><div class="grid three">${LANGS.map(l=>`<div class="card"><b>${escapeHtml(l)}</b><p style="color:var(--muted);font-size:12px">Available language option</p></div>`).join("")}</div>`},
  fields(){return `<div class="page-head"><div><h3>Form Fields</h3><p>Fields used by the PDF Generator.</p></div><button class="primary" onclick="addField()">+ Add Field</button></div>
  <div class="card table-wrap"><table class="table"><thead><tr><th>Label</th><th>Key</th><th>Type</th><th>Required</th><th>Action</th></tr></thead><tbody>${data.fields.map(f=>`<tr><td>${escapeHtml(f.label)}</td><td>${escapeHtml(f.key)}</td><td>${f.type}</td><td>${f.required?"Yes":"No"}</td><td><button class="danger" onclick="deleteField('${f.key}')">Delete</button></td></tr>`).join("")}</tbody></table></div>`},
@@ -117,6 +119,10 @@ function bindPage(){
 }
 function go(page){currentPage=page;$$(".nav-item[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));render()}
 function resetForm(){formData={name:"",gender:"Male",dob:"",place:"",mother:"",father:"",address:"",registration:"",registrationDate:"",issueDate:""};render();toast("Form reset")}
+function addState(){const name=prompt("State / UT name");if(!name)return;const clean=name.trim();if(!clean)return;if(data.states.some(s=>s.name.toLowerCase()===clean.toLowerCase()))return toast("State already exists");data.states.push({name:clean,active:true});save();render();toast("State added")}
+function editState(i){const old=data.states[i];const name=prompt("Edit State / UT",old.name);if(!name)return;const clean=name.trim();if(!clean)return;if(data.states.some((s,j)=>j!==i&&s.name.toLowerCase()===clean.toLowerCase()))return toast("State already exists");old.name=clean;save();render();toast("State updated")}
+function toggleState(i){data.states[i].active=!data.states[i].active;save();render();toast(data.states[i].active?"State enabled":"State disabled")}
+function deleteState(i){if(data.states.length<=1)return toast("Keep at least one State / UT");const name=data.states[i].name;if(confirm("Delete "+name+"?")){data.states.splice(i,1);if(selectedState===name){selectedState=data.states.find(s=>s.active)?.name||data.states[0].name;selectedLangs=availableLangs()}save();render();toast("State deleted")}}
 function addTemplate(){const name=prompt("Template name","New Birth Certificate Demo");if(!name)return;data.templates.push({id:Date.now(),name,state:selectedState,active:true});save();render();toast("Template added")}
 function toggleTemplate(id){const t=data.templates.find(x=>x.id===id);if(t){t.active=!t.active;save();render()}}
 function deleteTemplate(id){if(data.templates.length===1)return toast("Keep at least one template");if(confirm("Delete this template?")){data.templates=data.templates.filter(x=>x.id!==id);save();render();}}
