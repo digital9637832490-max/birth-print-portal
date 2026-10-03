@@ -25,3 +25,7 @@ Do not use generated output as an official government certificate or record.
 
 ## Source reference
 The Maharashtra layout was designed as an educational visual reference from the user-provided sample PDF. No government verification or issuance functionality is included.
+
+
+## Point 4 — Language Management
+State-wise language mappings with add/edit/delete, active/inactive, and multi-language combinations such as English + Hindi, English + Marathi, and English + Hindi + Marathi.

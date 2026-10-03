@@ -65,7 +65,7 @@ const pages={
  templates(){return `<div class="page-head"><div><h3>Templates</h3><p>Manage demo templates used by the generator.</p></div><button class="primary" onclick="addTemplate()">+ Add Template</button></div>
  <div class="card table-wrap"><table class="table"><thead><tr><th>Template</th><th>State</th><th>Status</th><th>Actions</th></tr></thead><tbody>${data.templates.map(t=>`<tr><td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.state)}</td><td><span class="pill ${t.active?"":"off"}">${t.active?"Active":"Disabled"}</span></td><td><div class="actions"><button class="ghost" onclick="toggleTemplate(${t.id})">${t.active?"Disable":"Enable"}</button><button class="danger" onclick="deleteTemplate(${t.id})">Delete</button></div></td></tr>`).join("")}</tbody></table></div>`},
  states(){return `<div class="page-head"><div><h3>States & UTs</h3><p>${data.states.length} locations configured for template selection.</p></div><button class="primary" onclick="addState()">+ Add State / UT</button></div><div class="card table-wrap"><table class="table"><thead><tr><th>State / UT</th><th>Languages</th><th>Status</th><th>Actions</th></tr></thead><tbody>${data.states.map((s,i)=>`<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml((stateLangs[s.name]||["English","Hindi"]).join(" • "))}</td><td><span class="pill ${s.active?"":"off"}">${s.active?"Active":"Inactive"}</span></td><td><div class="actions"><button class="ghost" onclick="editState(${i})">Edit</button><button class="ghost" onclick="toggleState(${i})">${s.active?"Disable":"Enable"}</button><button class="danger" onclick="deleteState(${i})">Delete</button></div></td></tr>`).join("")}</tbody></table></div>`},
- languages(){return `<div class="page-head"><div><h3>Languages</h3><p>Language combinations are selected per document.</p></div></div><div class="grid three">${LANGS.map(l=>`<div class="card"><b>${escapeHtml(l)}</b><p style="color:var(--muted);font-size:12px">Available language option</p></div>`).join("")}</div>`},
+ languages(){const maps=languageMappings();return `<div class="page-head"><div><h3>Language Management</h3><p>Manage state-wise languages and multi-language combinations.</p></div><button class="primary" onclick="addLanguageMapping()">+ Add Language Mapping</button></div><div class="card table-wrap"><table class="table"><thead><tr><th>State / UT</th><th>Languages</th><th>Combinations</th><th>Status</th><th>Actions</th></tr></thead><tbody>${maps.map((m,i)=>{const combos=[];for(let a=0;a<m.languages.length;a++)for(let b=a+1;b<m.languages.length;b++)combos.push(m.languages[a]+" + "+m.languages[b]);return `<tr><td>${escapeHtml(m.state)}</td><td>${escapeHtml(m.languages.join(" • "))}</td><td>${escapeHtml(combos.join(" • ")||"Single language")}</td><td><span class="pill ${m.active?"":"off"}">${m.active?"Active":"Inactive"}</span></td><td><div class="actions"><button class="ghost" onclick="editLanguageMapping(${i})">Edit</button><button class="ghost" onclick="toggleLanguageMapping(${i})">${m.active?"Disable":"Enable"}</button><button class="danger" onclick="deleteLanguageMapping(${i})">Delete</button></div></td></tr>`}).join("")}</tbody></table></div>`},
  fields(){return `<div class="page-head"><div><h3>Form Fields</h3><p>Fields used by the PDF Generator.</p></div><button class="primary" onclick="addField()">+ Add Field</button></div>
  <div class="card table-wrap"><table class="table"><thead><tr><th>Label</th><th>Key</th><th>Type</th><th>Required</th><th>Action</th></tr></thead><tbody>${data.fields.map(f=>`<tr><td>${escapeHtml(f.label)}</td><td>${escapeHtml(f.key)}</td><td>${f.type}</td><td>${f.required?"Yes":"No"}</td><td><button class="danger" onclick="deleteField('${f.key}')">Delete</button></td></tr>`).join("")}</tbody></table></div>`},
  history(){return `<div class="page-head"><div><h3>Generated PDF History</h3><p>Saved locally in this browser.</p></div><button class="danger" onclick="clearHistory()">Clear History</button></div>
@@ -119,6 +119,32 @@ function bindPage(){
 }
 function go(page){currentPage=page;$$(".nav-item[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));render()}
 function resetForm(){formData={name:"",gender:"Male",dob:"",place:"",mother:"",father:"",address:"",registration:"",registrationDate:"",issueDate:""};render();toast("Form reset")}
+
+function languageMappings(){
+ const defaults={...stateLangs};
+ const saved=JSON.parse(localStorage.getItem("bpp_language_mappings")||"null");
+ if(saved&&Array.isArray(saved)) return saved;
+ const maps=STATES.map(state=>({state,languages:defaults[state]||["English","Hindi"],active:true}));
+ localStorage.setItem("bpp_language_mappings",JSON.stringify(maps)); return maps;
+}
+function saveLanguageMappings(m){localStorage.setItem("bpp_language_mappings",JSON.stringify(m));}
+function addLanguageMapping(){
+ const maps=languageMappings(); const state=prompt("State / UT", "Maharashtra"); if(!state)return;
+ if(maps.some(x=>x.state.toLowerCase()===state.trim().toLowerCase()))return toast("Mapping already exists");
+ const langs=prompt("Languages (comma separated)","English,Hindi,Marathi"); if(!langs)return;
+ const list=langs.split(",").map(x=>x.trim()).filter(Boolean); if(!list.length)return toast("Select at least one language");
+ maps.push({state:state.trim(),languages:[...new Set(list)],active:true}); saveLanguageMappings(maps); render(); toast("Language mapping added");
+}
+function editLanguageMapping(i){
+ const maps=languageMappings(), x=maps[i]; if(!x)return;
+ const state=prompt("Edit State / UT",x.state); if(!state)return;
+ const langs=prompt("Languages (comma separated)",x.languages.join(",")); if(!langs)return;
+ const list=langs.split(",").map(v=>v.trim()).filter(Boolean); if(!list.length)return toast("Select at least one language");
+ x.state=state.trim(); x.languages=[...new Set(list)]; saveLanguageMappings(maps); render(); toast("Language mapping updated");
+}
+function toggleLanguageMapping(i){const m=languageMappings();m[i].active=!m[i].active;saveLanguageMappings(m);render();toast(m[i].active?"Language mapping enabled":"Language mapping disabled");}
+function deleteLanguageMapping(i){const m=languageMappings();if(m.length<=1)return toast("Keep at least one mapping");if(confirm("Delete this language mapping?")){m.splice(i,1);saveLanguageMappings(m);render();toast("Language mapping deleted")}}
+
 function addState(){const name=prompt("State / UT name");if(!name)return;const clean=name.trim();if(!clean)return;if(data.states.some(s=>s.name.toLowerCase()===clean.toLowerCase()))return toast("State already exists");data.states.push({name:clean,active:true});save();render();toast("State added")}
 function editState(i){const old=data.states[i];const name=prompt("Edit State / UT",old.name);if(!name)return;const clean=name.trim();if(!clean)return;if(data.states.some((s,j)=>j!==i&&s.name.toLowerCase()===clean.toLowerCase()))return toast("State already exists");old.name=clean;save();render();toast("State updated")}
 function toggleState(i){data.states[i].active=!data.states[i].active;save();render();toast(data.states[i].active?"State enabled":"State disabled")}
