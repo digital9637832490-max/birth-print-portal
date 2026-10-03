@@ -6,20 +6,35 @@
   <title>Birth Print Portal — Admin Dashboard</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<style>#adminLoginOverlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#f3f6fb;padding:20px}#adminLoginBox{width:min(420px,100%);background:#fff;border-radius:18px;padding:28px;box-shadow:0 18px 60px #0002}#adminLoginBox label{display:block;font-weight:600;margin:12px 0 6px}#adminLoginBox input{width:100%;box-sizing:border-box;padding:12px;border:1px solid #ccd3df;border-radius:10px}#adminLoginBtn{width:100%;margin-top:18px;padding:12px;border:0;border-radius:10px;cursor:pointer;font-weight:700}#adminLoginError{color:#c62828;margin-top:10px;min-height:20px}</style></head>
-<body><div id="adminLoginOverlay"><div id="adminLoginBox"><h2>Admin Login</h2><p>Birth Print Portal — Admin Dashboard</p><label>Admin ID / Email</label><input id="adminLoginEmail" type="email" autocomplete="username" placeholder="Enter admin email"><label>Password</label><input id="adminLoginPassword" type="password" autocomplete="current-password" placeholder="Enter password"><button id="adminLoginBtn" type="button">Login</button><div id="adminLoginError"></div></div></div>
-  <div id="loginScreen" class="login-screen">
-    <div class="login-card">
-      <div class="brand-mark">BP</div>
-      <h1>Birth Print Portal</h1>
-      <p>Admin PDF Demo Generator</p>
-      <input id="loginEmail" type="email" placeholder="Admin email" value="digital9637832490@gmail.com" autocomplete="username">
-      <button id="loginBtn" class="primary full">Enter Dashboard</button>
-      <small>Educational demo portal</small>
-    </div>
+<style>
+#adminLoginOverlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#f3f6fb;padding:20px}
+#adminLoginBox{width:min(420px,100%);background:#fff;border-radius:18px;padding:30px;box-shadow:0 18px 60px #0002}
+#adminLoginBox .login-logo{width:55px;height:55px;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-size:20px;font-weight:800}
+#adminLoginBox h2{text-align:center;margin:0;color:#17365d}
+#adminLoginBox .login-subtitle{text-align:center;color:#667085;margin:7px 0 24px}
+#adminLoginBox label{display:block;font-weight:600;margin:14px 0 6px;color:#344054}
+#adminLoginBox input{width:100%;box-sizing:border-box;padding:13px 14px;border:1px solid #ccd3df;border-radius:10px;outline:none;font-size:15px}
+#adminLoginBox input:focus{border-color:#2563eb;box-shadow:0 0 0 3px #2563eb18}
+#adminLoginBtn{width:100%;margin-top:20px;padding:13px;border:0;border-radius:10px;cursor:pointer;font-weight:700;font-size:15px;color:#fff;background:linear-gradient(135deg,#2563eb,#4f46e5)}
+#adminLoginError{color:#c62828;margin-top:12px;min-height:20px;text-align:center;font-size:14px}
+.login-demo-note{text-align:center;color:#98a2b3;font-size:12px;margin-top:18px}
+</style></head>
+<body><div id="adminLoginOverlay">
+  <div id="adminLoginBox">
+    <div class="login-logo">BP</div>
+    <h2>Birth Print Portal</h2>
+    <div class="login-subtitle">Admin Dashboard Login</div>
+    <label for="adminLoginEmail">Admin ID / Email</label>
+    <input id="adminLoginEmail" type="email" placeholder="Enter Admin ID" autocomplete="username">
+    <label for="adminLoginPassword">Password</label>
+    <input id="adminLoginPassword" type="password" placeholder="Enter Password" autocomplete="current-password">
+    <button id="adminLoginBtn" type="button">Login to Admin Dashboard</button>
+    <div id="adminLoginError"></div>
+    <div class="login-demo-note">Authorized Admin Access Only</div>
   </div>
+</div>
 
-  <div id="app" class="app hidden">
+<div id="app" class="app hidden">
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">BP</div>
@@ -59,5 +74,45 @@
 
   <div id="toast" class="toast"></div>
   <script src="js/app.js"></script>
-<script>(function(){const E='digital9637832490@gmail.com',P='Nitesh@143',o=document.getElementById('adminLoginOverlay'),e=document.getElementById('adminLoginEmail'),p=document.getElementById('adminLoginPassword'),b=document.getElementById('adminLoginBtn'),x=document.getElementById('adminLoginError');function l(){if(e.value.trim().toLowerCase()===E&&p.value===P){sessionStorage.setItem('birthPrintAdminLoggedIn','1');o.style.display='none'}else{x.textContent='Invalid Admin ID or Password'}}b.onclick=l;p.onkeydown=a=>{if(a.key==='Enter')l()};if(sessionStorage.getItem('birthPrintAdminLoggedIn')==='1')o.style.display='none'})();</script></body>
+<script>(function(){const E='digital9637832490@gmail.com',P='Nitesh@143',o=document.getElementById('adminLoginOverlay'),e=document.getElementById('adminLoginEmail'),p=document.getElementById('adminLoginPassword'),b=document.getElementById('adminLoginBtn'),x=document.getElementById('adminLoginError');function l(){if(e.value.trim().toLowerCase()===E&&p.value===P){sessionStorage.setItem('birthPrintAdminLoggedIn','1');o.style.display='none'}else{x.textContent='Invalid Admin ID or Password'}}b.onclick=l;p.onkeydown=a=>{if(a.key==='Enter')l()};if(sessionStorage.getItem('birthPrintAdminLoggedIn')==='1')o.style.display='none'})();</script>
+<script>
+(function(){
+  const ADMIN_EMAIL="digital9637832490@gmail.com";
+  const ADMIN_PASSWORD="Nitesh@143";
+  const overlay=document.getElementById("adminLoginOverlay");
+  const emailInput=document.getElementById("adminLoginEmail");
+  const passwordInput=document.getElementById("adminLoginPassword");
+  const loginButton=document.getElementById("adminLoginBtn");
+  const errorBox=document.getElementById("adminLoginError");
+  const app=document.getElementById("app");
+  function showApp(){overlay.style.display="none";app.classList.remove("hidden");if(typeof render==="function")render();}
+  function login(){
+    const email=emailInput.value.trim().toLowerCase();
+    const password=passwordInput.value;
+    if(email===ADMIN_EMAIL.toLowerCase() && password===ADMIN_PASSWORD){
+      sessionStorage.setItem("birthPrintAdminLoggedIn","1");
+      sessionStorage.setItem("birthPrintAdminEmail",ADMIN_EMAIL);
+      errorBox.textContent="";
+      showApp();
+    }else{
+      errorBox.textContent="Invalid Admin ID or Password";
+      passwordInput.value="";
+      passwordInput.focus();
+    }
+  }
+  loginButton.addEventListener("click",login);
+  passwordInput.addEventListener("keydown",e=>{if(e.key==="Enter")login();});
+  emailInput.addEventListener("keydown",e=>{if(e.key==="Enter")passwordInput.focus();});
+  if(sessionStorage.getItem("birthPrintAdminLoggedIn")==="1")showApp();
+  const logoutButton=document.getElementById("logoutBtn");
+  if(logoutButton)logoutButton.addEventListener("click",()=>{
+    sessionStorage.removeItem("birthPrintAdminLoggedIn");
+    sessionStorage.removeItem("birthPrintAdminEmail");
+    app.classList.add("hidden");
+    overlay.style.display="flex";
+    emailInput.value=""; passwordInput.value=""; errorBox.textContent="";
+  });
+})();
+</script>
+</body>
 </html>
