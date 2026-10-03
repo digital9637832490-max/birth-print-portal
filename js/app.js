@@ -144,7 +144,8 @@ function generatePdf(){
  doc.setTextColor(70);doc.setFontSize(8);doc.text("NOT AN OFFICIAL GOVERNMENT DOCUMENT",w/2,h-35,{align:"center"});
  doc.save("birth-print-demo.pdf"); saveHistory(); toast("Demo PDF downloaded");
 }
-$("#loginBtn").onclick=()=>{const n=$("#loginName").value.trim()||"Admin";$("#adminAvatar").textContent=n[0].toUpperCase();$("#loginScreen").classList.add("hidden");$("#app").classList.remove("hidden");render()};
+const ADMIN_EMAIL="digital9637832490@gmail.com";
+$("#loginBtn").onclick=()=>{const email=$("#loginEmail").value.trim().toLowerCase();if(email!==ADMIN_EMAIL){alert("Please use the registered Admin email: "+ADMIN_EMAIL);return;}$("#adminAvatar").textContent="A";$("#loginScreen").classList.add("hidden");$("#app").classList.remove("hidden");render()};
 $("#logoutBtn").onclick=()=>{$("#app").classList.add("hidden");$("#loginScreen").classList.remove("hidden")};
 $$(".nav-item[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
 $("#mobileMenu").onclick=()=>$(".sidebar").classList.toggle("open");
