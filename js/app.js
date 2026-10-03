@@ -28,6 +28,22 @@ const DEFAULT_FIELDS = [
 ];
 
 const DEFAULT_WATERMARK = "DEMO • SAMPLE • NOT AN OFFICIAL GOVERNMENT DOCUMENT";
+const STATE_META = {
+  "Andhra Pradesh":["AP","Andhra Pradesh"],"Arunachal Pradesh":["AR","Arunachal Pradesh"],"Assam":["AS","Assam"],"Bihar":["BR","Bihar"],
+  "Chhattisgarh":["CG","Chhattisgarh"],"Goa":["GA","Goa"],"Gujarat":["GJ","Gujarat"],"Haryana":["HR","Haryana"],
+  "Himachal Pradesh":["HP","Himachal Pradesh"],"Jharkhand":["JH","Jharkhand"],"Karnataka":["KA","Karnataka"],"Kerala":["KL","Kerala"],
+  "Madhya Pradesh":["MP","Madhya Pradesh"],"Maharashtra":["MH","Maharashtra"],"Manipur":["MN","Manipur"],"Meghalaya":["ML","Meghalaya"],
+  "Mizoram":["MZ","Mizoram"],"Nagaland":["NL","Nagaland"],"Odisha":["OD","Odisha"],"Punjab":["PB","Punjab"],
+  "Rajasthan":["RJ","Rajasthan"],"Sikkim":["SK","Sikkim"],"Tamil Nadu":["TN","Tamil Nadu"],"Telangana":["TS","Telangana"],
+  "Tripura":["TR","Tripura"],"Uttar Pradesh":["UP","Uttar Pradesh"],"Uttarakhand":["UK","Uttarakhand"],"West Bengal":["WB","West Bengal"],
+  "Andaman and Nicobar Islands":["AN","Andaman & Nicobar"],"Chandigarh":["CH","Chandigarh"],
+  "Dadra and Nagar Haveli and Daman and Diu":["DN","Dadra & Nagar Haveli and Daman & Diu"],"Delhi":["DL","Delhi"],
+  "Jammu and Kashmir":["JK","Jammu & Kashmir"],"Ladakh":["LA","Ladakh"],"Lakshadweep":["LD","Lakshadweep"],"Puducherry":["PY","Puducherry"]
+};
+function stateMeta(state){ return STATE_META[state] || ["ST",state]; }
+function demoLogo(label, sub){ return `<div class="demo-logo"><div class="demo-logo-mark">${esc(label)}</div><div><strong>${esc(sub)}</strong><small>STATE LOGO • DEMO</small></div></div>`; }
+function demoFormLogo(){ return `<div class="form-logo"><div class="form-logo-mark">FORM 5</div><small>FORM LOGO • DEMO</small></div>`; }
+
 
 function readJSON(key, fallback){
   try { const v=JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch(e){ return fallback; }
@@ -159,11 +175,69 @@ function renderGenerator(c){
   c.querySelector("#generateBtn").onclick=generatePdf;c.querySelector("#saveHistoryBtn").onclick=saveHistory;c.querySelector("#resetForm").onclick=()=>{formData={};ensureFormDefaults();render();toast("Form reset")};
 }
 function fieldHtml(f){const v=formData[f.key]??"";if(f.type==="textarea")return `<div class="field wide"><label>${esc(f.label)} ${f.required?"*":""}</label><textarea data-key="${esc(f.key)}" ${f.required?"required":""}>${esc(v)}</textarea></div>`;if(f.type==="select")return `<div class="field"><label>${esc(f.label)} ${f.required?"*":""}</label><select data-key="${esc(f.key)}">${(f.options||["Male","Female","Other"]).map(o=>`<option ${v===o?"selected":""}>${esc(o)}</option>`).join("")}</select></div>`;return `<div class="field"><label>${esc(f.label)} ${f.required?"*":""}</label><input data-key="${esc(f.key)}" type="${f.type==="date"?"date":"text"}" value="${esc(v)}" ${f.required?"required":""}></div>`;}
-function paperHtml(){const t=data.templates.find(x=>x.id===selectedTemplate);const state=selectedState;return `<div class="paper-watermark">${esc(data.settings.watermark)}</div><div class="paper-head"><strong>${esc(data.settings.websiteName)}</strong><span>DEMO / SAMPLE</span></div><div class="paper-state">${esc(state.toUpperCase())}</div><h2>BIRTH CERTIFICATE</h2><div class="paper-sub">जन्म प्रमाण पत्र • SAMPLE EDUCATIONAL TEMPLATE</div><div class="paper-rule"></div><div class="paper-note">This is a demo layout for learning PDF generation. It is not an official government document.</div><div class="paper-table">${data.fields.map(f=>`<div class="paper-cell"><b>${esc(f.label)}</b><span>${esc(formData[f.key]||"—")}</span></div>`).join("")}<div class="paper-cell"><b>State / UT</b><span>${esc(state)}</span></div><div class="paper-cell"><b>Languages</b><span>${esc(selectedLangs.join(" + ")||"—")}</span></div></div><div class="paper-footer"><span>${esc(t?.name||"Demo Template")}</span><strong>${esc(data.settings.footerText)}</strong></div></div>`;}
+function paperHtml(){
+  const t=data.templates.find(x=>x.id===selectedTemplate);
+  const state=selectedState;
+  const [abbr,stateLabel]=stateMeta(state);
+  const langs=selectedLangs.length?selectedLangs:["English"];
+  const v=k=>formData[k]||"—";
+  const maharashtra = state === "Maharashtra";
+  return `<div class="paper-watermark">${esc(data.settings.watermark)}</div>
+    <div class="certificate-demo-strip">DEMO / SAMPLE — FOR EDUCATIONAL & UI TESTING ONLY</div>
+    <div class="certificate-header">
+      ${demoLogo(abbr,stateLabel)}
+      <div class="certificate-title">
+        <div class="gov-title">${esc(maharashtra?"GOVERNMENT OF MAHARASHTRA":"GOVERNMENT / STATE ADMINISTRATION — DEMO")}</div>
+        <div class="dept-title">${esc(maharashtra?"DEPARTMENT OF HEALTH":"DEPARTMENT / LOCAL AUTHORITY — DEMO")}</div>
+        <h2>BIRTH CERTIFICATE</h2><div class="hindi-title">जन्म प्रमाण पत्र</div>
+      </div>
+      ${demoFormLogo()}
+    </div>
+    <div class="legal-text"><b>ISSUED UNDER SECTION 12/17 OF THE REGISTRATION OF BIRTHS &amp; DEATHS ACT, 1969</b><br>
+    <span>जन्म और मृत्यु पंजीकरण अधिनियम, 1969 की संबंधित धाराओं के अंतर्गत — DEMO / SAMPLE</span></div>
+    <div class="certificate-rule"></div>
+    <div class="source-text"><b>THIS IS TO CERTIFY THAT THE FOLLOWING INFORMATION HAS BEEN TAKEN FROM THE ORIGINAL RECORD OF BIRTH — DEMO COPY ONLY.</b><br>
+    <span>यह प्रमाणित किया जाता है कि नीचे दी गई जानकारी केवल डेमो/शैक्षणिक नमूने के लिए है और किसी सरकारी रिकॉर्ड का प्रमाण नहीं है।</span></div>
+    <div class="identity-grid">
+      <div><b>NAME / नाम</b><span>${esc(v("name"))}</span></div><div><b>SEX / लिंग</b><span>${esc(v("gender"))}</span></div>
+      <div><b>AADHAAR NUMBER / आधार नंबर</b><span>XXXXXXXX XXXX — DEMO</span></div><div><b>DATE OF BIRTH / जन्म तिथि</b><span>${esc(v("dob"))}</span></div>
+      <div><b>PLACE OF BIRTH / जन्म स्थान</b><span>${esc(v("place"))}</span></div><div><b>REGISTRATION NUMBER / पंजीकरण संख्या</b><span>${esc(v("registration"))}</span></div>
+      <div><b>NAME OF MOTHER / माता का नाम</b><span>${esc(v("mother"))}</span></div><div><b>NAME OF FATHER / पिता का नाम</b><span>${esc(v("father"))}</span></div>
+      <div><b>AADHAAR NUMBER OF MOTHER / माता का आधार</b><span>XXXXXXXX XXXX — DEMO</span></div><div><b>AADHAAR NUMBER OF FATHER / पिता का आधार</b><span>XXXXXXXX XXXX — DEMO</span></div>
+      <div class="full"><b>ADDRESS OF PARENTS AT THE TIME OF BIRTH OF THE CHILD / बच्चे के जन्म के समय माता-पिता का पता</b><span>${esc(v("address"))}</span></div>
+      <div class="full"><b>PERMANENT ADDRESS OF PARENTS / माता-पिता का स्थायी पता</b><span>${esc(v("address"))}</span></div>
+      <div><b>DATE OF REGISTRATION / पंजीकरण तारीख</b><span>${esc(v("registrationDate"))}</span></div><div><b>DATE OF ISSUE / जारी करने की तिथि</b><span>${esc(v("issueDate"))}</span></div>
+      <div><b>STATE / UNION TERRITORY</b><span>${esc(state)}</span></div><div><b>LANGUAGES / भाषाएँ</b><span>${esc(langs.join(" + "))}</span></div>
+    </div>
+    <div class="certificate-bottom">
+      <div><b>S.No. / क्रमांक</b><span>1</span></div><div><b>FORM</b><span>5 — DEMO</span></div><div><b>AUTHORITY / प्राधिकारी</b><span>SUB-REGISTRAR / LOCAL AUTHORITY — DEMO</span></div>
+    </div>
+    <div class="qr-sign-row"><div class="demo-qr">DEMO<br>QR<br>AREA</div><div class="issue-note">Updated / Issued: ${esc(v("issueDate"))}<br><br>Signature of Issuing Authority / जारी करने वाला प्राधिकारी<br><b>DEMO SIGNATURE AREA</b></div></div>
+    <div class="certificate-footer"><span>${esc(t?.name||"Demo Birth Certificate Template")}</span><b>ENSURE REGISTRATION OF EVERY BIRTH AND DEATH — DEMO TEXT</b></div>
+    <div class="certificate-disclaimer">${esc(data.settings.footerText)} • No authenticity verification is provided.</div>
+  </div>`;
+}
+
 function updatePreview(){const p=document.getElementById("paper");if(p)p.innerHTML=paperHtml();}
 function validateRequired(){for(const f of data.fields){if(f.required&&!String(formData[f.key]||"").trim()){toast(`${f.label} is required`);return false;}}return true;}
 function saveHistory(){if(!validateRequired())return;data.history.unshift({id:uid("hist"),date:new Date().toLocaleString(),state:selectedState,templateId:selectedTemplate,languages:[...selectedLangs],name:formData.name||"",form:{...formData}});save();toast("Saved to PDF History");}
-function generatePdf(){if(!validateRequired())return;if(!jsPDF){toast("PDF library not loaded");return;}const doc=new jsPDF({unit:"pt",format:"a4"}),w=doc.internal.pageSize.getWidth(),h=doc.internal.pageSize.getHeight();doc.setFont("helvetica","bold");doc.setFontSize(18);doc.text("BIRTH CERTIFICATE",w/2,55,{align:"center"});doc.setFontSize(9);doc.text("DEMO / SAMPLE — "+selectedState.toUpperCase(),w/2,72,{align:"center"});doc.setFont("helvetica","normal");doc.text("Languages: "+(selectedLangs.join(" + ")||"Not selected"),w/2,88,{align:"center"});doc.line(42,102,w-42,102);let y=125;data.fields.forEach(f=>{doc.setFont("helvetica","bold");doc.setFontSize(9);doc.text(f.label,55,y);doc.setFont("helvetica","normal");doc.text(String(formData[f.key]||"—").slice(0,105),205,y);doc.line(45,y+8,w-45,y+8);y+=34;if(y>h-100){doc.addPage();y=55;}});doc.setTextColor(205,50,50);doc.setFont("helvetica","bold");doc.setFontSize(24);doc.text("DEMO • SAMPLE",w/2,h/2,{align:"center",angle:25});doc.setFontSize(8);doc.text(data.settings.footerText,w/2,h-30,{align:"center"});const filename="birth-print-demo-"+new Date().toISOString().slice(0,10)+".pdf";doc.save(filename);saveHistory();toast("Demo PDF generated");}
+async function generatePdf(){
+  if(!validateRequired())return;
+  const paper=document.getElementById("paper");
+  if(!paper){toast("A4 preview not found");return;}
+  if(!window.jspdf?.jsPDF || !window.html2canvas){toast("PDF tools are still loading");return;}
+  try{
+    toast("Preparing A4 PDF…");
+    const canvas=await window.html2canvas(paper,{scale:2,backgroundColor:"#ffffff",useCORS:true,logging:false});
+    const doc=new window.jspdf.jsPDF({unit:"pt",format:"a4",orientation:"portrait"});
+    const w=doc.internal.pageSize.getWidth(),h=doc.internal.pageSize.getHeight();
+    doc.addImage(canvas.toDataURL("image/jpeg",0.96),"JPEG",0,0,w,h,undefined,"FAST");
+    const filename="birth-print-demo-"+new Date().toISOString().slice(0,10)+".pdf";
+    doc.save(filename);
+    saveHistory();
+    toast("A4 Demo PDF downloaded — preview and PDF match");
+  }catch(err){console.error(err);toast("PDF generation failed. Please try again.");}
+}
 
 function renderHistory(c){c.innerHTML=`<div class="page-head"><div><h1>Generated PDF History</h1><p>Local browser history of generated/saved demo documents.</p></div><button class="btn danger" id="clearHistory">Clear History</button></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Name</th><th>State</th><th>Languages</th><th>Actions</th></tr></thead><tbody>${data.history.map(h=>`<tr><td>${esc(h.date)}</td><td>${esc(h.name||"—")}</td><td>${esc(h.state)}</td><td>${esc((h.languages||[]).join(" + "))}</td><td><button class="btn small" data-preview="${h.id}">Preview</button> <button class="btn small danger" data-delete="${h.id}">Delete</button></td></tr>`).join("")||`<tr><td colspan="5">No history yet.</td></tr>`}</tbody></table></div>`;c.querySelector("#clearHistory").onclick=()=>{if(confirm("Clear all history?")){data.history=[];save();render();}};c.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>{data.history=data.history.filter(h=>h.id!==b.dataset.delete);save();render();});c.querySelectorAll("[data-preview]").forEach(b=>b.onclick=()=>{const h=data.history.find(x=>x.id===b.dataset.preview);if(!h)return;selectedState=h.state;selectedTemplate=h.templateId;selectedLangs=h.languages||["English"];formData={...(h.form||{})};nav("generator");});}
 
